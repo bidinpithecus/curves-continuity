@@ -44,5 +44,42 @@ pub fn generate_knot_vector(n: usize, degree: usize) -> Vec<f64> {
             t.push((n - degree + 2) as f64);
         }
     }
+
     t
+}
+
+pub fn dk_bspline(u: f64, i: usize, degree: usize, knots: &[f64], k: usize) -> f64 {
+    if k == 0 {
+        return basis_function(u, i, degree, knots);
+    }
+
+    // Calculate first term safely
+    let first_term = if i + degree < knots.len() && knots[i + degree] - knots[i] != 0.0 {
+        (degree as f64) / (knots[i + degree] - knots[i]) * dk_bspline(u, i, degree - 1, knots, k - 1)
+    } else {
+        0.0
+    };
+
+    // Calculate second term safely
+    let second_term = if i + degree + 1 < knots.len() && knots[i + degree + 1] - knots[i + 1] != 0.0 {
+        (degree as f64) / (knots[i + degree + 1] - knots[i + 1]) * dk_bspline(u, i + 1, degree - 1, knots, k - 1)
+    } else {
+        0.0
+    };
+
+    first_term - second_term
+}
+
+pub fn derivative_bspline(points: &[Vec<f64>], u: f64, k: usize, degree: usize, knots: &[f64]) -> Vec<f64> {
+    let dim = points[0].len();
+    let mut p = vec![0.0; dim];
+
+    for (i, point) in points.iter().enumerate() {
+        let dk_b = dk_bspline(u, i, degree, knots, k);
+        for (j, coord) in point.iter().enumerate() {
+            p[j] += coord * dk_b;
+        }
+    }
+
+    p
 }
