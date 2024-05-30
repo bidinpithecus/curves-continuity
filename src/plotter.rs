@@ -18,24 +18,29 @@ impl Plotter {
         };
 
         let trace = Scatter::new(x_values, y_values)
-        .mode(Mode::Lines)
-        .name(name)
-        .line(plotly::common::Line::new().dash(dash_type));
+            .mode(Mode::Lines)
+            .name(name)
+            .line(plotly::common::Line::new().dash(dash_type));
 
         self.plot.add_trace(trace);
     }
 
     pub fn markers(&mut self, x_values: Vec<f64>, y_values: Vec<f64>, name: &str) {
         let markers = Scatter::new(x_values, y_values)
-        .mode(Mode::Markers)
-        .name(name)
-        .marker(Marker::new().size(10));
+            .mode(Mode::Markers)
+            .name(name)
+            .marker(Marker::new().size(10));
 
         self.plot.add_trace(markers);
     }
 
     pub fn plot(&mut self, title: &str, filename: &str, show: bool, save: bool) {
-        self.plot.set_layout(plotly::Layout::new().width(800).height(600).title(Title::from(title)));
+        self.plot.set_layout(
+            plotly::Layout::new()
+                .width(800)
+                .height(600)
+                .title(Title::from(title)),
+        );
 
         if show {
             self.plot.show();

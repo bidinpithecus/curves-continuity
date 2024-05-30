@@ -1,4 +1,4 @@
-fn fact(number : u128) -> u128 {
+fn fact(number: u128) -> u128 {
     (1..=number).product()
 }
 
@@ -29,22 +29,24 @@ pub fn bezier(points: &[Vec<f64>], u: f64) -> Vec<f64> {
     interpolated_points[0].clone()
 }
 
-pub fn dk_bezier(u: f64, i: i128, n: u128, k: f64) -> f64 {
+pub fn dk_bezier(u: f64, i: i128, n: u128, k: usize) -> f64 {
     if i > n as i128 || i < 0 {
         return 0.0;
     }
 
-    if k == 0.0 {
-        return fact(n) as f64 / (fact(i as u128) as f64 * fact((n as i128 - i) as u128) as f64) * powf(u, i as u128) * powf(1.0 - u, n - i as u128);
+    if k == 0 {
+        return fact(n) as f64 / (fact(i as u128) as f64 * fact((n as i128 - i) as u128) as f64)
+            * powf(u, i as u128)
+            * powf(1.0 - u, n - i as u128);
     }
 
-    let first_term = dk_bezier(u, i - 1, n - 1, k - 1.0);
-    let second_term = dk_bezier(u, i, n - 1, k - 1.0);
+    let first_term = dk_bezier(u, i - 1, n - 1, k - 1);
+    let second_term = dk_bezier(u, i, n - 1, k - 1);
 
     n as f64 * (first_term - second_term)
 }
 
-pub fn derivative_bezier(points: &[Vec<f64>], u: f64, k: f64) -> Vec<f64> {
+pub fn derivative_bezier(points: &[Vec<f64>], u: f64, k: usize) -> Vec<f64> {
     let n = points.len() - 1;
     let mut p = vec![0.0; points[0].len()];
 

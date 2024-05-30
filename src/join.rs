@@ -1,13 +1,16 @@
 use crate::{bezier, bspline};
 
-pub fn c0_continuity(first_control_points: &[Vec<f64>], second_control_points: &[Vec<f64>]) -> Vec<Vec<f64>> {
+pub fn c0_continuity(
+    first_control_points: &[Vec<f64>],
+    second_control_points: &[Vec<f64>],
+) -> Vec<Vec<f64>> {
     let first_curve_last_point = &first_control_points[first_control_points.len() - 1];
     let second_curve_first_point = &second_control_points[0];
 
     let delta = vec![
         first_curve_last_point[0] - second_curve_first_point[0],
         first_curve_last_point[1] - second_curve_first_point[1],
-        first_curve_last_point[2] - second_curve_first_point[2]
+        first_curve_last_point[2] - second_curve_first_point[2],
     ];
 
     let mut new_control_points = Vec::with_capacity(second_control_points.len() - 1);
@@ -16,17 +19,29 @@ pub fn c0_continuity(first_control_points: &[Vec<f64>], second_control_points: &
         new_control_points.push(vec![
             point[0] + delta[0],
             point[1] + delta[1],
-            point[2] + delta[2]
+            point[2] + delta[2],
         ]);
     }
 
     new_control_points
 }
 
-pub fn c1_continuity(first_control_points: &[Vec<f64>], second_control_points: &[Vec<f64>], first_curve_degree: usize, first_curve_knots: &[f64], h: f64) -> Vec<Vec<f64>> {
+pub fn c1_continuity(
+    first_control_points: &[Vec<f64>],
+    second_control_points: &[Vec<f64>],
+    first_curve_degree: usize,
+    first_curve_knots: &[f64],
+    h: f64,
+) -> Vec<Vec<f64>> {
     let mut second_control_points = c0_continuity(first_control_points, second_control_points);
     let n = first_control_points.len() - 1;
-    let d_s = bspline::derivative_bspline(first_control_points, first_curve_knots[n + 1] - h, 1, first_curve_degree, first_curve_knots);
+    let d_s = bspline::derivative_bspline(
+        first_control_points,
+        first_curve_knots[n + 1] - h,
+        1,
+        first_curve_degree,
+        first_curve_knots,
+    );
     let b_0 = &second_control_points[0];
     let m = second_control_points.len() as f64 - 1.0;
 
@@ -38,18 +53,36 @@ pub fn c1_continuity(first_control_points: &[Vec<f64>], second_control_points: &
 
     second_control_points[1] = b_1;
 
-    let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 1.0);
+    let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 1);
     println!("First derivative should be the same: {d_s:?}; {d_b:?}");
 
     second_control_points
 }
 
-pub fn c2_continuity(first_control_points: &[Vec<f64>], second_control_points: &[Vec<f64>], first_curve_degree: usize, first_curve_knots: &[f64], h: f64) -> Vec<Vec<f64>> {
-    let mut second_control_points = c1_continuity(first_control_points, second_control_points, first_curve_degree, first_curve_knots, h);
+pub fn c2_continuity(
+    first_control_points: &[Vec<f64>],
+    second_control_points: &[Vec<f64>],
+    first_curve_degree: usize,
+    first_curve_knots: &[f64],
+    h: f64,
+) -> Vec<Vec<f64>> {
+    let mut second_control_points = c1_continuity(
+        first_control_points,
+        second_control_points,
+        first_curve_degree,
+        first_curve_knots,
+        h,
+    );
 
     let n = first_control_points.len() - 1;
     let m = second_control_points.len() as f64 - 1.0;
-    let d_s = bspline::derivative_bspline(first_control_points, first_curve_knots[n + 1] - h, 2, first_curve_degree, first_curve_knots);
+    let d_s = bspline::derivative_bspline(
+        first_control_points,
+        first_curve_knots[n + 1] - h,
+        2,
+        first_curve_degree,
+        first_curve_knots,
+    );
     let b_0 = &second_control_points[0];
     let b_1 = &second_control_points[1];
     let b_2 = vec![
@@ -60,7 +93,7 @@ pub fn c2_continuity(first_control_points: &[Vec<f64>], second_control_points: &
 
     second_control_points[2] = b_2;
 
-    let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 2.0);
+    let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 2);
     println!("Second derivative should be the same: {d_s:?}; {d_b:?}");
 
     second_control_points

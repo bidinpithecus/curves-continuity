@@ -8,13 +8,15 @@ pub fn basis_function(u: f64, i: usize, degree: usize, knots: &[f64]) -> f64 {
     }
 
     let first_term = if knots[i + degree - 1] - knots[i] != 0.0 {
-        (u - knots[i]) * basis_function(u, i, degree - 1, knots) / (knots[i + degree - 1] - knots[i])
+        (u - knots[i]) * basis_function(u, i, degree - 1, knots)
+            / (knots[i + degree - 1] - knots[i])
     } else {
         0.0
     };
 
     let second_term = if knots[i + degree] - knots[i + 1] != 0.0 {
-        (knots[i + degree] - u) * basis_function(u, i + 1, degree - 1, knots) / (knots[i + degree] - knots[i + 1])
+        (knots[i + degree] - u) * basis_function(u, i + 1, degree - 1, knots)
+            / (knots[i + degree] - knots[i + 1])
     } else {
         0.0
     };
@@ -53,16 +55,17 @@ pub fn dk_bspline(u: f64, i: usize, degree: usize, knots: &[f64], k: usize) -> f
         return basis_function(u, i, degree, knots);
     }
 
-    // Calculate first term safely
     let first_term = if i + degree < knots.len() && knots[i + degree] - knots[i] != 0.0 {
-        (degree as f64) / (knots[i + degree] - knots[i]) * dk_bspline(u, i, degree - 1, knots, k - 1)
+        (degree as f64) / (knots[i + degree] - knots[i])
+            * dk_bspline(u, i, degree - 1, knots, k - 1)
     } else {
         0.0
     };
 
-    // Calculate second term safely
-    let second_term = if i + degree + 1 < knots.len() && knots[i + degree + 1] - knots[i + 1] != 0.0 {
-        (degree as f64) / (knots[i + degree + 1] - knots[i + 1]) * dk_bspline(u, i + 1, degree - 1, knots, k - 1)
+    let second_term = if i + degree + 1 < knots.len() && knots[i + degree + 1] - knots[i + 1] != 0.0
+    {
+        (degree as f64) / (knots[i + degree + 1] - knots[i + 1])
+            * dk_bspline(u, i + 1, degree - 1, knots, k - 1)
     } else {
         0.0
     };
@@ -70,7 +73,13 @@ pub fn dk_bspline(u: f64, i: usize, degree: usize, knots: &[f64], k: usize) -> f
     first_term - second_term
 }
 
-pub fn derivative_bspline(points: &[Vec<f64>], u: f64, k: usize, degree: usize, knots: &[f64]) -> Vec<f64> {
+pub fn derivative_bspline(
+    points: &[Vec<f64>],
+    u: f64,
+    k: usize,
+    degree: usize,
+    knots: &[f64],
+) -> Vec<f64> {
     let dim = points[0].len();
     let mut p = vec![0.0; dim];
 
