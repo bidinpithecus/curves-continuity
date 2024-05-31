@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 ndarray = "0.15.6"
-plotly = "0.8.4"
+plotly = { version = "0.8.4", features = ["kaleido"] }

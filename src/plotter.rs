@@ -46,7 +46,9 @@ impl Plotter {
             self.plot.show();
         }
         if save {
-            self.plot.write_html(filename);
+            self.plot.write_html(format!("{}.html", filename));
+            self.plot.write_image(format!("{}.svg", filename), plotly::ImageFormat::SVG, 800, 600, 1.0);
+            self.plot.write_image(format!("{}.pdf", filename), plotly::ImageFormat::PDF, 800, 600, 1.0);
         }
     }
 }
