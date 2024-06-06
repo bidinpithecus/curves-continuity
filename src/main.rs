@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut c2_first_derivative_plotter = plotter::Plotter::new();
     let mut c2_second_derivative_plotter = plotter::Plotter::new();
     let mut c2_complete_plotter = plotter::Plotter::new();
-    let num_points = 1000;
+    let num_points = 100000;
 
     // B-Spline start
     let (bspline_degree, bspline_control_points) = parse_file("input/bspline.txt")?;

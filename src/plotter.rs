@@ -54,7 +54,7 @@ impl Plotter {
                 900,
                 1.0,
             );
-            // self.plot.write_image(format!("{}.pdf", filename), plotly::ImageFormat::PDF, 1600, 900, 1.0);
+            self.plot.write_image(format!("{}.pdf", filename), plotly::ImageFormat::PDF, 1600, 900, 1.0);
         }
     }
 }
