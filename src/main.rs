@@ -4,6 +4,36 @@ mod join;
 mod plotter;
 
 use ndarray::Array;
+use std::fs::File;
+use std::io::{self, BufRead};
+
+fn parse_file(file_path: &str) -> io::Result<(usize, Vec<Vec<f64>>)> {
+    let file = File::open(file_path)?;
+    let reader = io::BufReader::new(file);
+    let mut degree: usize = 0;
+    let mut control_points: Vec<Vec<f64>> = Vec::new();
+
+    for (line_number, line) in reader.lines().enumerate() {
+        let line = line?;
+        if line_number == 0 {
+            degree = line.trim().parse::<usize>().unwrap();
+        } else {
+            let nums_in_line: Vec<f64> = line
+                .split(',')
+                .map(|num_str| num_str.trim().parse::<f64>().unwrap())
+                .collect();
+
+            if nums_in_line.len() == 3 {
+                let point = vec![nums_in_line[0], nums_in_line[1], nums_in_line[2]];
+                control_points.push(point);
+            } else {
+                eprintln!("Invalid format in line {}: {:?}", line_number + 1, line);
+            }
+        }
+    }
+
+    Ok((degree, control_points))
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut bspline_plotter = plotter::Plotter::new();
@@ -17,32 +47,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut c2_first_derivative_plotter = plotter::Plotter::new();
     let mut c2_second_derivative_plotter = plotter::Plotter::new();
     let mut c2_complete_plotter = plotter::Plotter::new();
-    let num_points = 100000;
+    let num_points = 1000;
 
     // B-Spline start
-    let bspline_control_points = vec![
-        vec![0.0, 0.0, 0.0],
-        vec![0.5, 1.5, 0.0],
-        vec![1.0, -1.5, 0.0],
-        vec![1.5, 1.0, 0.0],
-        vec![2.0, -1.25, 0.0],
-        vec![2.5, 1.0, 0.0],
-        vec![3.0, 1.5, 0.0],
-        vec![3.5, 1.0, 0.0],
-        vec![4.0, 1.0, 0.0],
-        vec![4.5, 0.0, 0.0],
-    ];
+    let (bspline_degree, bspline_control_points) = parse_file("input/bspline.txt")?;
 
     let n = bspline_control_points.len() - 1;
-    let degree = 5;
-    let knots = bspline::generate_knot_vector(n, degree);
+    let knots = bspline::generate_knot_vector(n, bspline_degree);
 
     let bspline_lin_space: Vec<f64> =
-        Array::linspace(knots[degree - 1], knots[n + 1] - 1e-10, num_points).into_raw_vec();
+        Array::linspace(knots[bspline_degree - 1], knots[n + 1] - 1e-10, num_points).into_raw_vec();
     let mut bspline_curve_points = Vec::new();
 
     for &u in &bspline_lin_space {
-        let point = bspline::bspline(&bspline_control_points, u, degree, &knots);
+        let point = bspline::bspline(&bspline_control_points, u, bspline_degree, &knots);
         bspline_curve_points.push(point);
     }
 
@@ -77,14 +95,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // B-Spline end
 
     // Bezier start
-    let bezier_control_points = vec![
-        vec![0.0, 0.0, 0.0],
-        vec![0.5, 1.5, 0.0],
-        vec![1.25, 2.0, 0.0],
-        vec![2.5, 1.5, 0.0],
-        vec![1.5, 0.5, 0.0],
-        vec![4.0, -1.5, 0.0],
-    ];
+    let (bezier_degree, bezier_control_points) = parse_file("input/bezier.txt")?;
 
     let bezier_lin_space: Vec<f64> =
         Array::linspace(0.0, 1.0 - 0.000000001, num_points).into_raw_vec();
@@ -229,7 +240,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     c1_plotter.line(x_values.clone(), y_values.clone(), "B-Spline Curve", false);
     c1_complete_plotter.line(x_values, y_values, "B-Spline Curve", false);
-    
+
     c1_plotter.line(
         x_control_points.clone(),
         y_control_points.clone(),
@@ -243,13 +254,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         true,
     );
 
-    c1_plotter.markers(x_control_points.clone(), y_control_points.clone(), "Control Points");
+    c1_plotter.markers(
+        x_control_points.clone(),
+        y_control_points.clone(),
+        "Control Points",
+    );
     c1_complete_plotter.markers(x_control_points, y_control_points, "Control Points");
 
     let mut bspline_derivative_curve_points = Vec::new();
 
     for &u in &bspline_lin_space {
-        let point = bspline::derivative_bspline(&bspline_control_points, u, 1, degree, &knots);
+        let point =
+            bspline::derivative_bspline(&bspline_control_points, u, 1, bezier_degree, &knots);
         bspline_derivative_curve_points.push(point);
     }
 
@@ -257,16 +273,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c1_complete_plotter.line(x_values.clone(), y_values.clone(), "B-Spline First Derivative", false);
+    c1_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "B-Spline First Derivative",
+        false,
+    );
     c1_derivative_plotter.line(x_values, y_values, "B-Spline First Derivative", false);
 
-    let bezier_control_points = join::c1_continuity(
+    let c1 = join::c1_continuity(
         &bspline_control_points,
         &bezier_control_points,
-        degree,
+        bezier_degree,
         &knots,
         h,
     );
+
+    let c1_derivatives = c1.0;
+
+    let d_s = c1_derivatives.0;
+    let d_b = c1_derivatives.1;
+
+    println!("First derivative bspline: {d_s:?}");
+    println!("First derivative bezier:  {d_b:?}");
+
+    let bezier_control_points = c1.1;
 
     let mut bezier_curve_points = Vec::new();
 
@@ -300,7 +331,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         true,
     );
 
-    c1_plotter.markers(x_control_points.clone(), y_control_points.clone(), "Control Points");
+    c1_plotter.markers(
+        x_control_points.clone(),
+        y_control_points.clone(),
+        "Control Points",
+    );
     c1_complete_plotter.markers(x_control_points, y_control_points, "Control Points");
 
     let mut bezier_derivative_curve_points = Vec::new();
@@ -314,7 +349,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c1_complete_plotter.line(x_values.clone(), y_values.clone(), "Bezier First Derivative", false);
+    c1_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "Bezier First Derivative",
+        false,
+    );
     c1_derivative_plotter.line(x_values, y_values, "Bezier First Derivative", false);
 
     c1_plotter.plot("C1 continuity", "results/c1/c1", false, true);
@@ -349,13 +389,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         true,
     );
 
-    c2_plotter.markers(x_control_points.clone(), y_control_points.clone(), "Control Points");
+    c2_plotter.markers(
+        x_control_points.clone(),
+        y_control_points.clone(),
+        "Control Points",
+    );
     c2_complete_plotter.markers(x_control_points, y_control_points, "Control Points");
 
     let mut bspline_derivative_curve_points = Vec::new();
 
     for &u in &bspline_lin_space {
-        let point = bspline::derivative_bspline(&bspline_control_points, u, 1, degree, &knots);
+        let point =
+            bspline::derivative_bspline(&bspline_control_points, u, 1, bspline_degree, &knots);
         bspline_derivative_curve_points.push(point);
     }
 
@@ -363,13 +408,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c2_complete_plotter.line(x_values.clone(), y_values.clone(), "B-Spline First Derivative", false);
+    c2_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "B-Spline First Derivative",
+        false,
+    );
     c2_first_derivative_plotter.line(x_values, y_values, "B-Spline First Derivative", false);
 
     let mut bspline_derivative_curve_points = Vec::new();
 
     for &u in &bspline_lin_space {
-        let point = bspline::derivative_bspline(&bspline_control_points, u, 2, degree, &knots);
+        let point =
+            bspline::derivative_bspline(&bspline_control_points, u, 2, bspline_degree, &knots);
         bspline_derivative_curve_points.push(point);
     }
 
@@ -377,16 +428,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c2_complete_plotter.line(x_values.clone(), y_values.clone(), "B-Spline Second Derivative", false);
+    c2_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "B-Spline Second Derivative",
+        false,
+    );
     c2_second_derivative_plotter.line(x_values, y_values, "B-Spline Second Derivative", false);
 
-    let bezier_control_points = join::c2_continuity(
+    let c2 = join::c2_continuity(
         &bspline_control_points,
         &bezier_control_points,
-        degree,
+        bspline_degree,
         &knots,
         h,
     );
+
+    let c2_derivatives = c2.0;
+
+    let d_s = c2_derivatives.0;
+    let d_b = c2_derivatives.1;
+
+    println!("Second derivative bspline: {d_s:?}");
+    println!("Second derivative bezier:  {d_b:?}");
+
+    let bezier_control_points = c2.1;
 
     let mut bezier_curve_points = Vec::new();
 
@@ -419,8 +485,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Control Polygon",
         true,
     );
-    
-    c2_plotter.markers(x_control_points.clone(), y_control_points.clone(), "Control Points");
+
+    c2_plotter.markers(
+        x_control_points.clone(),
+        y_control_points.clone(),
+        "Control Points",
+    );
     c2_complete_plotter.markers(x_control_points, y_control_points, "Control Points");
 
     let mut bezier_derivative_curve_points = Vec::new();
@@ -434,7 +504,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c2_complete_plotter.line(x_values.clone(), y_values.clone(), "Bezier First Derivative", false);
+    c2_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "Bezier First Derivative",
+        false,
+    );
     c2_first_derivative_plotter.line(x_values, y_values, "Bezier First Derivative", false);
 
     let mut bezier_derivative_curve_points = Vec::new();
@@ -448,12 +523,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .map(|point| (point[0], point[1]))
         .unzip();
-    c2_complete_plotter.line(x_values.clone(), y_values.clone(), "Bezier Second Derivative", false);
+    c2_complete_plotter.line(
+        x_values.clone(),
+        y_values.clone(),
+        "Bezier Second Derivative",
+        false,
+    );
     c2_second_derivative_plotter.line(x_values, y_values, "Bezier Second Derivative", false);
 
     c2_plotter.plot("C2 continuity", "results/c2/c2", false, true);
-    c2_first_derivative_plotter.plot("C2 continuity", "results/c2/c2-first-derivative", false, true);
-    c2_second_derivative_plotter.plot("C2 continuity", "results/c2/c2-second-derivative", false, true);
+    c2_first_derivative_plotter.plot(
+        "C2 continuity",
+        "results/c2/c2-first-derivative",
+        false,
+        true,
+    );
+    c2_second_derivative_plotter.plot(
+        "C2 continuity",
+        "results/c2/c2-second-derivative",
+        false,
+        true,
+    );
     c2_complete_plotter.plot("C2 continuity", "results/c2/c2-complete", false, true);
     // C2 end
 

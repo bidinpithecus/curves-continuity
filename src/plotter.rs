@@ -37,8 +37,8 @@ impl Plotter {
     pub fn plot(&mut self, title: &str, filename: &str, show: bool, save: bool) {
         self.plot.set_layout(
             plotly::Layout::new()
-                .width(800)
-                .height(600)
+                .width(1600)
+                .height(900)
                 .title(Title::from(title)),
         );
 
@@ -47,8 +47,14 @@ impl Plotter {
         }
         if save {
             self.plot.write_html(format!("{}.html", filename));
-            self.plot.write_image(format!("{}.svg", filename), plotly::ImageFormat::SVG, 800, 600, 1.0);
-            self.plot.write_image(format!("{}.pdf", filename), plotly::ImageFormat::PDF, 800, 600, 1.0);
+            self.plot.write_image(
+                format!("{}.svg", filename),
+                plotly::ImageFormat::SVG,
+                1600,
+                900,
+                1.0,
+            );
+            // self.plot.write_image(format!("{}.pdf", filename), plotly::ImageFormat::PDF, 1600, 900, 1.0);
         }
     }
 }

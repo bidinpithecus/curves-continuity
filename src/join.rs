@@ -32,8 +32,9 @@ pub fn c1_continuity(
     first_curve_degree: usize,
     first_curve_knots: &[f64],
     h: f64,
-) -> Vec<Vec<f64>> {
+) -> ((Vec<f64>, Vec<f64>), Vec<Vec<f64>>) {
     let mut second_control_points = c0_continuity(first_control_points, second_control_points);
+
     let n = first_control_points.len() - 1;
     let d_s = bspline::derivative_bspline(
         first_control_points,
@@ -54,9 +55,7 @@ pub fn c1_continuity(
     second_control_points[1] = b_1;
 
     let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 1);
-    println!("First derivative should be the same: {d_s:?}; {d_b:?}");
-
-    second_control_points
+    ((d_s, d_b), (second_control_points))
 }
 
 pub fn c2_continuity(
@@ -65,14 +64,15 @@ pub fn c2_continuity(
     first_curve_degree: usize,
     first_curve_knots: &[f64],
     h: f64,
-) -> Vec<Vec<f64>> {
+) -> ((Vec<f64>, Vec<f64>), Vec<Vec<f64>>) {
     let mut second_control_points = c1_continuity(
         first_control_points,
         second_control_points,
         first_curve_degree,
         first_curve_knots,
         h,
-    );
+    )
+    .1;
 
     let n = first_control_points.len() - 1;
     let m = second_control_points.len() as f64 - 1.0;
@@ -94,7 +94,5 @@ pub fn c2_continuity(
     second_control_points[2] = b_2;
 
     let d_b = bezier::derivative_bezier(&second_control_points, 0.0, 2);
-    println!("Second derivative should be the same: {d_s:?}; {d_b:?}");
-
-    second_control_points
+    ((d_s, d_b), (second_control_points))
 }
